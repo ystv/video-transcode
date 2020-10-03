@@ -65,13 +65,13 @@ func (c *Consumer) Listen() error {
 		return err
 	}
 	msgChan, err := ch.Consume(
-		q.Name,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
+		q.Name, // queue
+		"",     // consumer
+		false,  // autoAck
+		false,  // exclusive
+		false,  // noLocal
+		false,  // noWait
+		nil,    // args
 	)
 	if err != nil {
 		err = fmt.Errorf("Listen: failed to consume queue: %w", err)
@@ -81,7 +81,7 @@ func (c *Consumer) Listen() error {
 	stopChan := make(chan bool)
 
 	go func() {
-		log.Printf("Consumer ready, PID: %d", os.Getpid())
+		log.Printf("VT ready, PID: %d", os.Getpid())
 		for d := range msgChan {
 			log.Printf("Received: %s", d.Body)
 			task := &TranscodeVODTask{}

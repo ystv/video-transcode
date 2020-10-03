@@ -12,11 +12,30 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
 )
 
+// Config represents VT's configuration
+type Config struct {
+	AMQPEndpoint       string
+	CDNEndpoint        string
+	CDNAccessKeyID     string
+	CDNSecretAccessKey string
+}
+
+var conf Config
+
 func main() {
+	// Initialising config
+	godotenv.Load(".env.local")
+	godotenv.Load(".env")
+	conf.AMQPEndpoint = os.Getenv("VT_AMQP_ENDPOINT")
+	conf.CDNEndpoint = os.Getenv("VT_CDN_ENDPOINT")
+	conf.CDNAccessKeyID = os.Getenv("VT_CDN_ACCESSKEYID")
+	conf.CDNSecretAccessKey = os.Getenv("VT_CDN_SECRETACCESSKEY")
+
 	// Confirm ffmpeg installation
 	cmd := exec.Command("ffmpeg", "-version")
 	o, err := cmd.Output()
@@ -30,7 +49,7 @@ func main() {
 	log.Println("video-transcode: v0.1.0")
 	log.Printf("ffmpeg: v%s", ver[2])
 
-	connection, err := amqp.Dial("amqp://guest:guest@localhost:5672")
+	connection, err := amqp.Dial(conf.AMQPEndpoint)
 	if err != nil {
 		err = fmt.Errorf("failed to connect to amqp: %w", err)
 		log.Fatalf("%+v", err)
@@ -46,15 +65,11 @@ func main() {
 
 // NewCDN creates a connection to s3
 func NewCDN() *s3.S3 {
-	endpoint := os.Getenv("CDN_ENDPOINT")
-	accessKeyID := os.Getenv("CDN_ACCESSKEYID")
-	secretAccessKey := os.Getenv("CDN_SECRETACCESSKEY")
-
-	// Configure to use CDN Server
-
 	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
-		Endpoint:         aws.String(endpoint),
+		Credentials: credentials.NewStaticCredentials(
+			conf.CDNAccessKeyID,
+			conf.CDNSecretAccessKey, ""),
+		Endpoint:         aws.String(conf.CDNEndpoint),
 		Region:           aws.String("ystv-wales-1"),
 		S3ForcePathStyle: aws.Bool(true),
 	}
