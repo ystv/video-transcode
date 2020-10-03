@@ -39,7 +39,7 @@ func (e *Producer) Push(request TranscodeVODTask) error {
 		false,  // immediate
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
+			ContentType:  "application/json",
 			Body:         []byte(reqJSON),
 		},
 	)

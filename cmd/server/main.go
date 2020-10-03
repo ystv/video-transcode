@@ -20,12 +20,12 @@ func main() {
 
 	task := event.TranscodeVODTask{
 		Src:        "videos/American Football Match.mp4",
-		Dst:        "videos/2020_AFM_sum.mp4",
+		Dst:        "videos/2020_AFM_sum_electric.mp4",
 		EncodeName: "FHD 8Mbps",
 		EncodeArgs: "-vf scale=1920:1080 -c:v libx264 -crf 20 -preset slow -c:a copy -threads 0",
 	}
 
-	for i := 1; i < 10; i++ {
+	for i := 1; i < 2; i++ {
 		err = emitter.Push(task)
 		if err != nil {
 			log.Printf("%+v", err)
