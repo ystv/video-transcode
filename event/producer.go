@@ -13,7 +13,7 @@ type Producer struct {
 }
 
 // Push (publish) a specified message to the AMQP exchange
-func (e *Producer) Push(request TranscodeVODTask) error {
+func (e *Producer) Push(request Task, taskType string) error {
 
 	reqJSON, err := json.Marshal(request)
 	if err != nil {
@@ -27,7 +27,7 @@ func (e *Producer) Push(request TranscodeVODTask) error {
 		return err
 	}
 	defer ch.Close()
-	q, err := declareQueue(ch, "vod")
+	q, err := declareQueue(ch, taskType)
 	if err != nil {
 		err = fmt.Errorf("Push: failed to declare queue: %w", err)
 		return err
@@ -44,7 +44,7 @@ func (e *Producer) Push(request TranscodeVODTask) error {
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf("Push: failed to publish event \"%s\" to channel :%w", request.Src, err)
+		err = fmt.Errorf("Push: failed to publish event \"%s\" to channel :%w", request.SrcURL, err)
 		return err
 	}
 	return nil
