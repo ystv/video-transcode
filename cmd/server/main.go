@@ -2,10 +2,14 @@ package main
 
 import (
 	"log"
+	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
 )
+
+var emitter event.Producer
 
 func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
@@ -13,24 +17,15 @@ func main() {
 		panic(err)
 	}
 
-	emitter, err := event.NewProducer(conn)
+	emitter, err = event.NewProducer(conn)
 	if err != nil {
 		panic(err)
 	}
 
-	task := event.TranscodeVODTask{
-		Src:        "videos/American Football Match.mp4",
-		Dst:        "videos/2020_AFM_sum_electric.mp4",
-		EncodeName: "FHD 8Mbps",
-		EncodeArgs: "-vf scale=1920:1080 -c:v libx264 -crf 20 -preset slow -c:a copy -threads 0",
-	}
-
-	for i := 1; i < 2; i++ {
-		err = emitter.Push(task)
-		if err != nil {
-			log.Printf("%+v", err)
-		} else {
-			log.Print("task sent")
-		}
-	}
+	r := mux.NewRouter()
+	r.HandleFunc("/", IndexHandle)
+	r.HandleFunc("/new_vod", NewVODHandle)
+	r.HandleFunc("/new_live", NewLiveHandle)
+	log.Printf("listening on :7071")
+	log.Fatal(http.ListenAndServe(":7071", r))
 }
