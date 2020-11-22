@@ -6,13 +6,17 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// TranscodeVODTask represents a task to transcode for VOD
-type TranscodeVODTask struct {
-	Src        string `json:"src"`        // Location of source file on CDN
-	Dst        string `json:"dst"`        // Destination of finished encode on CDN
-	EncodeName string `json:"encodeName"` // Here for pretty logging
-	EncodeArgs string `json:"encodeArgs"` // Encode arguments
-}
+type (
+	// Task represents a task to transcode for VOD or live
+	Task struct {
+		ID      string `json:"id"`      // Task UUID
+		Args    string `json:"args"`    // Global arguments
+		SrcArgs string `json:"srcArgs"` // Input file options
+		SrcURL  string `json:"srcURL"`  // Location of source file on CDN
+		DstArgs string `json:"dstArgs"` // Output file options
+		DstURL  string `json:"dstURL"`  // Destination of finished encode on CDN
+	}
+)
 
 func declareQueue(ch *amqp.Channel, queueName string) (amqp.Queue, error) {
 	q, err := ch.QueueDeclare(
