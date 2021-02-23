@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
@@ -56,7 +57,12 @@ func main() {
 	}
 	defer connection.Close()
 
-	consumer, err := event.NewConsumer(connection, NewCDN())
+	m, err := NewManager()
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+
+	consumer, err := event.NewConsumer(connection, NewCDN(), m)
 	if err != nil {
 		panic(err)
 	}
@@ -75,4 +81,15 @@ func NewCDN() *s3.S3 {
 	}
 	newSession := session.New(s3Config)
 	return s3.New(newSession)
+}
+
+// NewManager creates a ws connection with the manager node
+// allows metrics and remote context
+func NewManager() (*websocket.Conn, error) {
+	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:7071/ws", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to ws: %w", err)
+	}
+	defer c.Close()
+	return c, nil
 }

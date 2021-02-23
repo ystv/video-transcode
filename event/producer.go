@@ -52,17 +52,17 @@ func (e *Producer) Push(request Task, taskType string) error {
 
 // NewProducer returns a new event.Producer object
 // ensuring that the object is initialised, without error
-func NewProducer(conn *amqp.Connection) (Producer, error) {
-	p := Producer{conn: conn}
+func NewProducer(conn *amqp.Connection) (*Producer, error) {
+	p := &Producer{conn: conn}
 	ch, err := p.conn.Channel()
 	if err != nil {
 		err = fmt.Errorf("NewProducer: failed to get channel: %w", err)
-		return Producer{}, err
+		return nil, err
 	}
 	err = declareExchange(ch)
 	if err != nil {
 		err = fmt.Errorf("NewProducer: failed to declare exchange: %w, err", err)
-		return Producer{}, err
+		return nil, err
 	}
 	return p, nil
 }
