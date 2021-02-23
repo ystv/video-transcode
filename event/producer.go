@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/streadway/amqp"
-	task "github.com/ystv/video-transcode/tasks"
+	"github.com/ystv/video-transcode/task"
 )
 
 // Producer for publishinh AMQP events

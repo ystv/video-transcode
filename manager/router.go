@@ -6,8 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	task "github.com/ystv/video-transcode/tasks"
-	"github.com/ystv/video-transcode/ws"
+	"github.com/ystv/video-transcode/task"
 )
 
 // Router encapsulates the managers HTTP endpoints
@@ -73,11 +72,11 @@ func (m *Manager) newLiveHandle(w http.ResponseWriter, r *http.Request) {
 // newWS handles upgrading a worker node's connection to a ws.
 // Used for metrics and context
 func (m *Manager) newWS(w http.ResponseWriter, r *http.Request) {
-	conn, err := ws.Upgrade(w, r)
+	conn, err := Upgrade(w, r)
 	if err != nil {
 		fmt.Fprintf(w, "%+V\n", err)
 		return
 	}
-	go ws.Writer(conn)
-	ws.Reader(conn)
+	go Writer(conn)
+	Reader(conn)
 }

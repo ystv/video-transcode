@@ -1,4 +1,4 @@
-package ws
+package manager
 
 import (
 	"fmt"
@@ -18,8 +18,7 @@ var upgrader = websocket.Upgrader{
 func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
-		return ws, err
+		return nil, fmt.Errorf("failed to upgrade: %w", err)
 	}
 	return ws, nil
 }

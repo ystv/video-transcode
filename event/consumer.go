@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/streadway/amqp"
-	task "github.com/ystv/video-transcode/tasks"
+	"github.com/ystv/video-transcode/task"
 )
 
 // Consumer for receiving AMPQ events
@@ -18,17 +17,17 @@ type Consumer struct {
 }
 
 // NewConsumer returns a new Consumer
-func NewConsumer(conn *amqp.Connection, cdn *s3.S3) (Consumer, error) {
-	c := Consumer{conn: conn, cdn: cdn}
+func NewConsumer(conn *amqp.Connection, cdn *s3.S3) (*Consumer, error) {
+	c := &Consumer{conn: conn, cdn: cdn}
 	ch, err := c.conn.Channel()
 	if err != nil {
 		err = fmt.Errorf("NewConsumer: failed to get channel: %w", err)
-		return Consumer{}, err
+		return nil, err
 	}
 	err = declareExchange(ch)
 	if err != nil {
 		err = fmt.Errorf("NewConsumer: failed to declare exchange: %w, err", err)
-		return Consumer{}, err
+		return nil, err
 	}
 	return c, nil
 }
@@ -64,7 +63,6 @@ func (c *Consumer) Listen() error {
 	stopChan := make(chan bool)
 
 	go func() {
-		log.Printf("VT ready, PID: %d", os.Getpid())
 		for d := range msgChan {
 			log.Printf("Received: %s", d.Body)
 			task := &task.Task{}
@@ -73,11 +71,11 @@ func (c *Consumer) Listen() error {
 				err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
 				log.Printf("%+v", err)
 			}
-			err = c.TaskLive(task)
-			if err != nil {
-				err = fmt.Errorf("failed to transcode video: %w", err)
-				log.Printf("%+v", err)
-			}
+			// err = c.TaskLive(task)
+			// if err != nil {
+			// 	err = fmt.Errorf("failed to transcode video: %w", err)
+			// 	log.Printf("%+v", err)
+			// }
 
 			// Acknowledge msg
 			err = d.Ack(false)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -15,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
+	"github.com/ystv/video-transcode/worker"
 )
 
 // Config represents VT's configuration
@@ -46,21 +46,21 @@ func main() {
 		log.Fatalf("failed to get ffmpeg version: %+v", err)
 	}
 	ver := strings.Split(string(o), " ")
-	log.Println("video-transcode: v0.1.0")
+	log.Println("video-transcode: v0.3.0")
 	log.Printf("ffmpeg: v%s", ver[2])
 
 	connection, err := amqp.Dial(conf.AMQPEndpoint)
 	if err != nil {
-		err = fmt.Errorf("failed to connect to amqp: %w", err)
-		log.Fatalf("%+v", err)
+		log.Fatalf("failed to connect to amqp: %+v", err)
 	}
 	defer connection.Close()
 
 	consumer, err := event.NewConsumer(connection, NewCDN())
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to start consumer: %+v", err)
 	}
-	consumer.Listen()
+	w := worker.New(consumer)
+	w.Run()
 }
 
 // NewCDN creates a connection to s3
