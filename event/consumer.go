@@ -7,31 +7,19 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/gorilla/websocket"
 	"github.com/streadway/amqp"
+	task "github.com/ystv/video-transcode/tasks"
 )
 
 // Consumer for receiving AMPQ events
 type Consumer struct {
 	conn *amqp.Connection
 	cdn  *s3.S3
-	ws   *websocket.Conn
-}
-
-// Stats represents statistics on the current encode job
-type Stats struct {
-	Duration   int    `json:"duration"`
-	Percentage int    `json:"percentage"`
-	Frame      int    `json:"frame"`
-	FPS        int    `json:"fps"`
-	Bitrate    string `json:"bitrate"`
-	Size       string `json:"size"`
-	Time       string `json:"time"`
 }
 
 // NewConsumer returns a new Consumer
-func NewConsumer(conn *amqp.Connection, cdn *s3.S3, ws *websocket.Conn) (Consumer, error) {
-	c := Consumer{conn: conn, cdn: cdn, ws: ws}
+func NewConsumer(conn *amqp.Connection, cdn *s3.S3) (Consumer, error) {
+	c := Consumer{conn: conn, cdn: cdn}
 	ch, err := c.conn.Channel()
 	if err != nil {
 		err = fmt.Errorf("NewConsumer: failed to get channel: %w", err)
@@ -48,12 +36,6 @@ func NewConsumer(conn *amqp.Connection, cdn *s3.S3, ws *websocket.Conn) (Consume
 // Listen will listen for all new Queue publications
 // and print them to the console.
 func (c *Consumer) Listen() error {
-
-	err := c.Announce("cool version")
-	if err != nil {
-		return fmt.Errorf("failed to announce: %w", err)
-	}
-
 	ch, err := c.conn.Channel()
 	if err != nil {
 		err = fmt.Errorf("Listen: failed to get channel: %w", err)
@@ -85,7 +67,7 @@ func (c *Consumer) Listen() error {
 		log.Printf("VT ready, PID: %d", os.Getpid())
 		for d := range msgChan {
 			log.Printf("Received: %s", d.Body)
-			task := &Task{}
+			task := &task.Task{}
 			err := json.Unmarshal(d.Body, task)
 			if err != nil {
 				err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
@@ -110,23 +92,5 @@ func (c *Consumer) Listen() error {
 	// Stop for program termination
 	<-stopChan
 
-	return nil
-}
-
-// Announce sends a message to the manager
-func (c *Consumer) Announce(ffmpegVersion string) error {
-	announce := struct {
-		FFmpegVersion string
-		VTVersion     string
-		Bandwidth     int // could run quick speed test
-	}{
-		FFmpegVersion: ffmpegVersion,
-	}
-	msg, err := json.Marshal(announce)
-	if err != nil {
-		return fmt.Errorf("failed to marhsal announce: %w", err)
-	}
-
-	c.ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	return nil
 }

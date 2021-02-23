@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/ystv/video-transcode/event"
+	task "github.com/ystv/video-transcode/tasks"
 	"github.com/ystv/video-transcode/ws"
 )
 
@@ -35,7 +35,7 @@ func (m *Manager) healthHandle(w http.ResponseWriter, r *http.Request) {
 // newVODHandle will download file from CDN to local
 // transcode, upload and cleanup
 func (m *Manager) newVODHandle(w http.ResponseWriter, r *http.Request) {
-	t := event.Task{}
+	t := task.Task{}
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -54,7 +54,7 @@ func (m *Manager) newVODHandle(w http.ResponseWriter, r *http.Request) {
 // newLiveHandle will stream file to ffmpeg, optional
 // transcode and send to new endpoint
 func (m *Manager) newLiveHandle(w http.ResponseWriter, r *http.Request) {
-	t := event.Task{}
+	t := task.Task{}
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -76,6 +76,7 @@ func (m *Manager) newWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := ws.Upgrade(w, r)
 	if err != nil {
 		fmt.Fprintf(w, "%+V\n", err)
+		return
 	}
 	go ws.Writer(conn)
 	ws.Reader(conn)

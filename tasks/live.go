@@ -1,4 +1,4 @@
-package event
+package task
 
 import (
 	"fmt"
@@ -7,17 +7,7 @@ import (
 )
 
 // TaskLive will transcode a live feed
-func (c *Consumer) TaskLive(t *Task) error {
-
-	// req, _ := c.cdn.PutObjectRequest(&s3.PutObjectInput{
-	// 	Bucket: aws.String("live"),
-	// 	Key:    aws.String(t.DstURL),
-	// })
-	// key, err := req.Presign(15 * time.Minute)
-	// if err != nil {
-	// 	return err
-	// }
-
+func (ta *Tasker) TaskLive(t *Task) error {
 	// TODO: ffprobe src
 	cmdString := fmt.Sprintf("ffmpeg %s %s -i \"%s\" %s \"%s\" 2>&1",
 		t.Args, t.SrcArgs, t.SrcURL, t.DstArgs, t.DstURL)

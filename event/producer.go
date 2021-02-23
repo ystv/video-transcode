@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/streadway/amqp"
+	task "github.com/ystv/video-transcode/tasks"
 )
 
 // Producer for publishinh AMQP events
@@ -13,7 +14,7 @@ type Producer struct {
 }
 
 // Push (publish) a specified message to the AMQP exchange
-func (e *Producer) Push(request Task, taskType string) error {
+func (e *Producer) Push(request task.Task, taskType string) error {
 
 	reqJSON, err := json.Marshal(request)
 	if err != nil {
