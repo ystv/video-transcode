@@ -15,6 +15,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+// Upgrade will convert a request into a websocket
 func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -23,6 +24,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	return ws, nil
 }
 
+// Reader reads the websocket connection
 func Reader(conn *websocket.Conn) {
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -40,6 +42,7 @@ func Reader(conn *websocket.Conn) {
 	}
 }
 
+// Writer writes into the websocket
 func Writer(conn *websocket.Conn) {
 	for {
 		fmt.Println("Sending")

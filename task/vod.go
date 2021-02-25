@@ -1,6 +1,7 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -16,18 +17,33 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-// Stats represents statistics on the current encode job
-type Stats struct {
-	Duration   int    `json:"duration"`
-	Percentage int    `json:"percentage"`
-	Frame      int    `json:"frame"`
-	FPS        int    `json:"fps"`
-	Bitrate    string `json:"bitrate"`
-	Size       string `json:"size"`
-	Time       string `json:"time"`
+var _ Task = &VOD{}
+
+// VOD task produces a video for the on demand platform
+type VOD struct {
+	TaskID  string `json:"taskID"`  // Task UUID
+	Args    string `json:"args"`    // Global arguments
+	SrcArgs string `json:"srcArgs"` // Input file options
+	SrcURL  string `json:"srcURL"`  // Location of source file on CDN
+	DstArgs string `json:"dstArgs"` // Output file options
+	DstURL  string `json:"dstURL"`  // Destination of finished encode on CDN
+
+	// dependencies
+	cdn *s3.S3
 }
 
-// TaskVOD makes a video for VOD
+// NewVOD initialises a VOD task object so we can
+// add the tasks dependencies
+func NewVOD(cdn *s3.S3) VOD {
+	return VOD{cdn: cdn}
+}
+
+// GetID returns a task ID
+func (t VOD) GetID() string {
+	return t.TaskID
+}
+
+// Start makes a video for VOD
 //
 // General outline
 // Creates a temp file
@@ -35,13 +51,13 @@ type Stats struct {
 // Download video object from S3 and put it in temp file
 // Execute ffmpeg arguements on downloaded file
 // Upload result file
-func (ta *Tasker) TaskVOD(t *Task) error {
+func (t VOD) Start(ctx context.Context) error {
 	// Change slashes with dashes making it easier to handle in the FS
 	srcPath := strings.Split(t.SrcURL, "/")
 	dstPath := strings.Split(t.DstURL, "/")
 	dstFilename := strings.Join(dstPath[1:], "-")
 
-	url, err := ta.presignFileURL(&srcPath[0], aws.String(strings.Join(srcPath[1:], "/")))
+	url, err := t.presignFileURL(&srcPath[0], aws.String(strings.Join(srcPath[1:], "/")))
 	if err != nil {
 		return fmt.Errorf("failed to sign source download: %w", err)
 	}
@@ -76,7 +92,7 @@ func (ta *Tasker) TaskVOD(t *Task) error {
 	startUp := time.Now()
 
 	// Uploading encoded file
-	_, err = ta.uploadFile(dstFilename, dstPath)
+	_, err = t.uploadFile(dstFilename, dstPath)
 	if err != nil {
 		return fmt.Errorf("failed to upload file: %w", err)
 	}
@@ -86,22 +102,22 @@ func (ta *Tasker) TaskVOD(t *Task) error {
 	return nil
 }
 
-func (ta *Tasker) presignFileURL(bucket, key *string) (string, error) {
-	req, _ := ta.cdn.GetObjectRequest(&s3.GetObjectInput{
+func (t *VOD) presignFileURL(bucket, key *string) (string, error) {
+	req, _ := t.cdn.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: bucket,
 		Key:    key,
 	})
 	return req.Presign(6 * time.Hour) // TODO: Look into time
 }
 
-func (ta *Tasker) uploadFile(src string, dst []string) (string, error) {
+func (t *VOD) uploadFile(src string, dst []string) (string, error) {
 	file, err := os.Open(src)
 	if err != nil {
 		err = fmt.Errorf("failed to open encoded file: %w", err)
 		return "", err
 	}
 	defer file.Close()
-	sess, err := session.NewSession(&ta.cdn.Config)
+	sess, err := session.NewSession(&t.cdn.Config)
 	if err != nil {
 		return "", fmt.Errorf("failed to create new cdn session: %w", err)
 	}

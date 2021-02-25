@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 type Consumer struct {
 	conn *amqp.Connection
 	cdn  *s3.S3
+	task *task.Tasker
 }
 
 // NewConsumer returns a new Consumer
@@ -41,41 +43,38 @@ func (c *Consumer) Listen() error {
 		return err
 	}
 	defer ch.Close()
-	q, err := declareQueue(ch, "live")
+
+	msgChan, err := newListener(ch, []string{"video/vod", "video/simple"})
 	if err != nil {
-		err = fmt.Errorf("Listen: failed to declare queue: %w", err)
-		return err
-	}
-	msgChan, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // autoAck
-		false,  // exclusive
-		false,  // noLocal
-		false,  // noWait
-		nil,    // args
-	)
-	if err != nil {
-		err = fmt.Errorf("Listen: failed to consume queue: %w", err)
-		return err
+		return fmt.Errorf("failed to start listening channels")
 	}
 
 	stopChan := make(chan bool)
 
 	go func() {
 		for d := range msgChan {
-			log.Printf("Received: %s", d.Body)
-			task := &task.Task{}
-			err := json.Unmarshal(d.Body, task)
-			if err != nil {
-				err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
-				log.Printf("%+v", err)
-			}
+			switch d.RoutingKey {
+			case queueVideoVOD:
+				log.Println("video/vod job")
+				t := task.NewVOD(c.cdn)
+				err := json.Unmarshal(d.Body, &t)
+				if err != nil {
+					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
+					log.Printf("%+v", err)
+				}
+				c.task.Add(context.Background(), t)
 			// err = c.TaskLive(task)
 			// if err != nil {
 			// 	err = fmt.Errorf("failed to transcode video: %w", err)
 			// 	log.Printf("%+v", err)
 			// }
+
+			case queueVideoSimple:
+				log.Println("video/simple job")
+			case queueImageSimple:
+				log.Println("image/simple job")
+			}
+			log.Printf("Received: %s", d.Body)
 
 			// Acknowledge msg
 			err = d.Ack(false)

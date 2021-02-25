@@ -30,8 +30,7 @@ func (e *Producer) Push(request task.Task, taskType string) error {
 	defer ch.Close()
 	q, err := declareQueue(ch, taskType)
 	if err != nil {
-		err = fmt.Errorf("Push: failed to declare queue: %w", err)
-		return err
+		return fmt.Errorf("Push: failed to declare queue: %w", err)
 	}
 	err = ch.Publish(
 		"",
@@ -45,8 +44,7 @@ func (e *Producer) Push(request task.Task, taskType string) error {
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf("Push: failed to publish event \"%s\" to channel :%w", request.SrcURL, err)
-		return err
+		return fmt.Errorf("Push: failed to publish event \"%s\" to channel :%w", request.GetID(), err)
 	}
 	return nil
 }

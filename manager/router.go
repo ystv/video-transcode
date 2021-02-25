@@ -14,8 +14,9 @@ func (m *Manager) Router() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", m.indexHandle)
 	r.HandleFunc("/ok", m.healthHandle)
-	r.HandleFunc("/task/vod", m.newVODHandle)
-	r.HandleFunc("/task/raw", m.newLiveHandle)
+	r.HandleFunc("/task/image/simple", m.newImageSimple)
+	r.HandleFunc("/task/video/simple", m.newVideoSimpleHandle)
+	r.HandleFunc("/task/video/vod", m.newVideoOnDemandHandle)
 	r.HandleFunc("/ws", m.newWS)
 	return r
 }
@@ -31,17 +32,22 @@ func (m *Manager) healthHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// newVODHandle will download file from CDN to local
+func (m *Manager) newImageSimple(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("simple image"))
+}
+
+// newVideoOnDemandHandle will download file from CDN to local
 // transcode, upload and cleanup
-func (m *Manager) newVODHandle(w http.ResponseWriter, r *http.Request) {
-	t := task.Task{}
+func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request) {
+	t := task.VOD{}
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err = m.mq.Push(t, "vod")
+	err = m.mq.Push(t, "video/vod")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -52,15 +58,15 @@ func (m *Manager) newVODHandle(w http.ResponseWriter, r *http.Request) {
 
 // newLiveHandle will stream file to ffmpeg, optional
 // transcode and send to new endpoint
-func (m *Manager) newLiveHandle(w http.ResponseWriter, r *http.Request) {
-	t := task.Task{}
+func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
+	t := task.SimpleVideo{}
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err = m.mq.Push(t, "live")
+	err = m.mq.Push(t, "video/simple")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
