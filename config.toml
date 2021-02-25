@@ -1,0 +1,14 @@
+name = "Raah"
+
+[mq]
+host = ""
+user = ""
+pass = ""
+
+[manager]
+host = ""
+
+[tasks]
+video_simple = true
+video_on_demand = true
+image_simple = false
