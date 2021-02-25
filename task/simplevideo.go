@@ -34,17 +34,19 @@ func (t SimpleVideo) Start(ctx context.Context) error {
 	cmd := exec.Command("sh", "-c",
 		cmdString)
 
-	// stdout, _ := cmd.StdoutPipe()
+	// Put ffmpeg's log into a nice struct and log it
+
 	err := cmd.Start()
 	if err != nil {
-		err = fmt.Errorf("failed to start ffmpeg: %w", err)
-		return err
+		return fmt.Errorf("failed to start ffmpeg: %w", err)
 	}
+	parseStat(cmd.StdoutPipe())
 
 	err = cmd.Wait()
 	if err != nil {
-		return err
+		return fmt.Errorf("exec failed to wait: %w", err)
 	}
+	log.Println("job well done")
 
 	return nil
 }

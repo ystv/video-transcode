@@ -20,7 +20,7 @@ type Consumer struct {
 
 // NewConsumer returns a new Consumer
 func NewConsumer(conn *amqp.Connection, cdn *s3.S3) (*Consumer, error) {
-	c := &Consumer{conn: conn, cdn: cdn}
+	c := &Consumer{conn: conn, cdn: cdn, task: task.New(cdn)}
 	ch, err := c.conn.Channel()
 	if err != nil {
 		err = fmt.Errorf("NewConsumer: failed to get channel: %w", err)
@@ -62,19 +62,28 @@ func (c *Consumer) Listen() error {
 					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
 					log.Printf("%+v", err)
 				}
-				c.task.Add(context.Background(), t)
-			// err = c.TaskLive(task)
-			// if err != nil {
-			// 	err = fmt.Errorf("failed to transcode video: %w", err)
-			// 	log.Printf("%+v", err)
-			// }
+				err = c.task.Add(context.Background(), t)
+				if err != nil {
+					err = fmt.Errorf("failed to add job: %w", err)
+					log.Printf("%+v", err)
+				}
 
 			case queueVideoSimple:
 				log.Println("video/simple job")
+				t := task.SimpleVideo{}
+				err := json.Unmarshal(d.Body, &t)
+				if err != nil {
+					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
+					log.Printf("%+v", err)
+				}
+				err = c.task.Add(context.Background(), t)
+				if err != nil {
+					err = fmt.Errorf("failed to add job: %w", err)
+					log.Printf("%+v", err)
+				}
 			case queueImageSimple:
 				log.Println("image/simple job")
 			}
-			log.Printf("Received: %s", d.Body)
 
 			// Acknowledge msg
 			err = d.Ack(false)
