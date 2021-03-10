@@ -1,3 +1,7 @@
 .env.local
 cmd/client/client
 cmd/server/server
+
+# in-case we leave some test media files
+*.mkv
+*.mp4
