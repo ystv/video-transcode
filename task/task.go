@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/s3"
 )
@@ -34,6 +35,11 @@ func (ta *Tasker) Add(ctx context.Context, t Task) error {
 	}
 	ta.tasks[t.GetID()] = t
 
-	ta.tasks[t.GetID()].Start(ctx)
+	err := ta.tasks[t.GetID()].Start(ctx)
+	if err != nil {
+		delete(ta.tasks, t.GetID())
+		return fmt.Errorf("failed to start job: %w", err)
+	}
+	delete(ta.tasks, t.GetID())
 	return nil
 }
