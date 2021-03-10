@@ -17,6 +17,7 @@ func (m *Manager) Router() *mux.Router {
 	r.HandleFunc("/task/image/simple", m.newImageSimple)
 	r.HandleFunc("/task/video/simple", m.newVideoSimpleHandle)
 	r.HandleFunc("/task/video/vod", m.newVideoOnDemandHandle)
+	r.HandleFunc("/task/video/probe", m.indexHandle)
 	r.HandleFunc("/ws", m.newWS)
 	return r
 }

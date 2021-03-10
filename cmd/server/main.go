@@ -14,7 +14,7 @@ import (
 func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to connect to mq: %+v", err)
 	}
 
 	emitter, err := event.NewProducer(conn)
