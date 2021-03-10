@@ -3,16 +3,33 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
 	"github.com/ystv/video-transcode/manager"
 )
 
+// Config represents VT's configuration
+type Config struct {
+	AMQPEndpoint string
+	HTTPUser     string
+	HTTPPass     string
+}
+
+var conf Config
+
 func main() {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
+	godotenv.Load(".env.local")
+	godotenv.Load(".env")
+	conf.AMQPEndpoint = os.Getenv("VT_AMQP_ENDPOINT")
+	conf.HTTPUser = os.Getenv("VT_HTTP_USER")
+	conf.HTTPPass = os.Getenv("VT_HTTP_PASS")
+
+	conn, err := amqp.Dial(conf.AMQPEndpoint)
 	if err != nil {
 		log.Fatalf("failed to connect to mq: %+v", err)
 	}
@@ -22,7 +39,7 @@ func main() {
 		log.Fatalf("failed to start producer: %+v", err)
 	}
 
-	m := manager.New(emitter)
+	m := manager.New(emitter, conf.HTTPUser, conf.HTTPPass)
 
 	r := mux.NewRouter()
 	mount(r, "/", m.Router())

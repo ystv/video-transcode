@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,10 +15,10 @@ func (m *Manager) Router() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", m.indexHandle)
 	r.HandleFunc("/ok", m.healthHandle)
-	r.HandleFunc("/task/image/simple", m.newImageSimple)
-	r.HandleFunc("/task/video/simple", m.newVideoSimpleHandle)
-	r.HandleFunc("/task/video/vod", m.newVideoOnDemandHandle)
-	r.HandleFunc("/task/video/probe", m.indexHandle)
+	r.HandleFunc("/task/image/simple", m.basicAuth(m.newImageSimple))
+	r.HandleFunc("/task/video/simple", m.basicAuth(m.newVideoSimpleHandle))
+	r.HandleFunc("/task/video/vod", m.basicAuth(m.newVideoOnDemandHandle))
+	r.HandleFunc("/task/video/probe", m.basicAuth(m.indexHandle))
 	r.HandleFunc("/ws", m.newWS)
 	return r
 }
@@ -86,4 +87,30 @@ func (m *Manager) newWS(w http.ResponseWriter, r *http.Request) {
 	}
 	go Writer(conn)
 	Reader(conn)
+}
+
+// basicAuth wraps a handler requiring HTTP basic auth for it using the given
+// username and password and the specified realm, which shouldn't contain quotes.
+//
+// Most web browser display a dialog with something like:
+//
+//    The website says: "<realm>"
+//
+// Which is really stupid so you may want to set the realm to a message rather than
+// an actual realm.
+func (m *Manager) basicAuth(handler http.HandlerFunc) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		user, pass, ok := r.BasicAuth()
+
+		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(m.user)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(m.pass)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Basic realm="ystv vt"`)
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorised.\n"))
+			return
+		}
+
+		handler(w, r)
+	}
 }

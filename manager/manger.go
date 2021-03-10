@@ -7,10 +7,12 @@ import (
 // Manager provides workers with jobs and offers REST
 // endpoints for 3rd party applications
 type Manager struct {
-	mq *event.Producer
+	user string
+	pass string
+	mq   *event.Producer
 }
 
 // New creates a new manager
-func New(mq *event.Producer) *Manager {
-	return &Manager{mq: mq}
+func New(mq *event.Producer, user, pass string) *Manager {
+	return &Manager{mq: mq, user: user, pass: pass}
 }
