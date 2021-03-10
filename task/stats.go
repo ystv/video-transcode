@@ -1,9 +1,6 @@
 package task
 
 import (
-	"fmt"
-	"io"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -19,40 +16,18 @@ type Stats struct {
 	Time       string `json:"time"`
 }
 
-func parseStat(stdout io.ReadCloser, err error) error {
-	if err != nil {
-		return fmt.Errorf("pipe failed: %w", err)
-	}
-	bytes := make([]byte, 100)
-	stats := &Stats{}
-	allRes := ""
-	for {
-		_, err := stdout.Read(bytes)
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}
-			return fmt.Errorf("failed to read stdout: %w", err)
-		}
-		allRes += string(bytes)
-		ok := getStats(allRes, stats)
-		if ok {
-			allRes = ""
-			log.Printf("%+v", stats)
-		}
-	}
-	return nil
-}
-
-func getStats(res string, s *Stats) bool {
-
+func getStats(s *Stats, res string) bool {
 	durIdx := strings.Index(res, "Duration")
 	// Checking if we've got a "Duration",
 	// we need this so we can determine the ETA
 	if durIdx >= 0 {
-
 		dur := res[durIdx+10:]
-		if len(dur) > 8 {
+		// handle if video doesn't have a length i.e. live
+		if dur[0:3] == "N/A" {
+			s.Duration = -1
+			s.Percentage = 100
+			return true
+		} else if len(dur) > 8 {
 			dur = dur[0:8]
 
 			s.Duration = durToSec(dur)
@@ -86,7 +61,10 @@ func getStats(res string, s *Stats) bool {
 			sec := durToSec(time)
 			per := (sec * 100) / s.Duration
 			if s.Percentage != per {
-				s.Percentage = per
+				// set percentage to 100% when we don't have a length
+				if s.Duration != -1 {
+					s.Percentage = per
+				}
 				// Just doing to reuse this int variable for each item
 				integer, _ := strconv.Atoi(frame[0])
 				s.Frame = integer

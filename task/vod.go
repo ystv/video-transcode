@@ -1,6 +1,7 @@
 package task
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -25,6 +26,8 @@ type VOD struct {
 	SrcURL  string `json:"srcURL"`  // Location of source file on CDN
 	DstArgs string `json:"dstArgs"` // Output file options
 	DstURL  string `json:"dstURL"`  // Destination of finished encode on CDN
+
+	stats *Stats
 
 	// dependencies
 	cdn *s3.S3
@@ -73,17 +76,36 @@ func (t VOD) Start(ctx context.Context) error {
 	cmd := exec.Command("sh", "-c",
 		cmdString)
 
-	// Put ffmpeg's log into a nice struct and log it
-	go parseStat(cmd.StdoutPipe())
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("pipe failed: %w", err)
+	}
 
 	// begin encoding
 	err = cmd.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start ffmpeg: %w", err)
 	}
+
+	t.stats = &Stats{}
+
+	scanner := bufio.NewScanner(stdout)
+	curLine := ""
+	buf := ""
+
+	for scanner.Scan() {
+		curLine = scanner.Text()
+		buf += curLine
+		ok := getStats(t.stats, buf)
+		if ok {
+			buf = ""
+			log.Printf("%+v", t.stats)
+		}
+	}
+
 	err = cmd.Wait()
 	if err != nil {
-		return fmt.Errorf("exec failed: %+v", err)
+		return fmt.Errorf("exec failed: %w", err)
 	}
 
 	log.Printf("finished encoding - completed in %s", time.Since(startEnc))
