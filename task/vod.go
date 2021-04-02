@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/google/uuid"
 )
 
 var _ Task = &VOD{}
@@ -53,6 +54,9 @@ func (t *VOD) ValidateRequest() error {
 	if t.DstURL == "" {
 		return fmt.Errorf("missing dstURL")
 	}
+
+	// Generating Task ID
+	t.TaskID = uuid.NewString()
 	return nil
 }
 

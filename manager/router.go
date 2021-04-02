@@ -15,6 +15,8 @@ func (m *Manager) Router() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", m.indexHandle)
 	r.HandleFunc("/ok", m.healthHandle)
+	r.HandleFunc("/status/job", m.basicAuth(m.jobStateHandle))
+	r.HandleFunc("/status/worker", m.basicAuth(m.workerStateHandle))
 	r.HandleFunc("/task/image/simple", m.basicAuth(m.newImageSimple))
 	r.HandleFunc("/task/video/simple", m.basicAuth(m.newVideoSimpleHandle))
 	r.HandleFunc("/task/video/vod", m.basicAuth(m.newVideoOnDemandHandle))
@@ -32,6 +34,16 @@ func (m *Manager) indexHandle(w http.ResponseWriter, r *http.Request) {
 // healthHandle for other services to check it's healthy
 func (m *Manager) healthHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+func (m *Manager) jobStateHandle(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+func (m *Manager) workerStateHandle(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	w.WriteHeader(http.StatusNotImplemented)
 }
 
 func (m *Manager) newImageSimple(w http.ResponseWriter, r *http.Request) {
@@ -59,8 +71,24 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("encoding"))
+	w.Header().Set("Content-Type", "application/json")
+
+	rtn, err := json.MarshalIndent(TaskIdentification{
+		State:  "encoding",
+		TaskID: t.GetID(),
+	}, "", "    ")
+
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("Encoding with Error - %v", err.Error()),
+			http.StatusInternalServerError,
+		)
+	}
+
+	w.Write(rtn)
+
 }
 
 // newLiveHandle will stream file to ffmpeg, optional
@@ -83,8 +111,23 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("encoding"))
+	w.Header().Set("Content-Type", "application/json")
+
+	rtn, err := json.MarshalIndent(TaskIdentification{
+		State:  "encoding",
+		TaskID: t.GetID(),
+	}, "", "    ")
+
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("Encoding with Error - %v", err.Error()),
+			http.StatusInternalServerError,
+		)
+	}
+
+	w.Write(rtn)
 }
 
 // newWS handles upgrading a worker node's connection to a ws.

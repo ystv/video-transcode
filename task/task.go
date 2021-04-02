@@ -18,7 +18,7 @@ type (
 	// Task is a generic representation of a task
 	Task interface {
 		GetID() string
-		ValidateRequest() error
+		ValidateRequest() error // Generates TaskID as well as validation
 		Start(ctx context.Context) error
 	}
 )

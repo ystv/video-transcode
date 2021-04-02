@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+
+	"github.com/google/uuid"
 )
 
 // SimpleVideo represents a task to transcode for VOD or simple
@@ -35,6 +37,9 @@ func (t *SimpleVideo) ValidateRequest() error {
 	if t.DstURL == "" {
 		return fmt.Errorf("missing dstURL")
 	}
+
+	// Generating Task ID
+	t.TaskID = uuid.NewString()
 	return nil
 }
 
