@@ -40,8 +40,20 @@ func NewVOD(cdn *s3.S3) VOD {
 }
 
 // GetID returns a task ID
-func (t VOD) GetID() string {
+func (t *VOD) GetID() string {
 	return t.TaskID
+}
+
+// CheckRequets returns an error describing if the user's request is not
+// formed properly and will stop the job continuing
+func (t *VOD) ValidateRequest() error {
+	if t.SrcURL == "" {
+		return fmt.Errorf("missing srcURL")
+	}
+	if t.DstURL == "" {
+		return fmt.Errorf("missing dstURL")
+	}
+	return nil
 }
 
 // Start makes a video for VOD
@@ -52,7 +64,7 @@ func (t VOD) GetID() string {
 // Download video object from S3 and put it in temp file
 // Execute ffmpeg arguements on downloaded file
 // Upload result file
-func (t VOD) Start(ctx context.Context) error {
+func (t *VOD) Start(ctx context.Context) error {
 	// Change slashes with dashes making it easier to handle in the FS
 	srcPath := strings.Split(t.SrcURL, "/")
 	dstPath := strings.Split(t.DstURL, "/")

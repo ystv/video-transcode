@@ -22,13 +22,25 @@ type SimpleVideo struct {
 }
 
 // GetID retrives the task ID
-func (t SimpleVideo) GetID() string {
+func (t *SimpleVideo) GetID() string {
 	return t.TaskID
+}
+
+// CheckRequets returns an error describing if the user's request is not
+// formed properly and will stop the job continuing
+func (t *SimpleVideo) ValidateRequest() error {
+	if t.SrcURL == "" {
+		return fmt.Errorf("missing srcURL")
+	}
+	if t.DstURL == "" {
+		return fmt.Errorf("missing dstURL")
+	}
+	return nil
 }
 
 // Start a task
 // This will only execute ffmpeg
-func (t SimpleVideo) Start(ctx context.Context) error {
+func (t *SimpleVideo) Start(ctx context.Context) error {
 	// TODO: ffprobe src
 	cmdString := fmt.Sprintf("ffmpeg %s %s -i \"%s\" %s \"%s\" 2>&1",
 		t.Args, t.SrcArgs, t.SrcURL, t.DstArgs, t.DstURL)

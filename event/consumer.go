@@ -62,7 +62,7 @@ func (c *Consumer) Listen() error {
 					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
 					log.Printf("%+v", err)
 				}
-				err = c.task.Add(context.Background(), t)
+				err = c.task.Add(context.Background(), &t)
 				if err != nil {
 					err = fmt.Errorf("failed to add job: %w", err)
 					log.Printf("%+v", err)
@@ -76,7 +76,7 @@ func (c *Consumer) Listen() error {
 					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
 					log.Printf("%+v", err)
 				}
-				err = c.task.Add(context.Background(), t)
+				err = c.task.Add(context.Background(), &t)
 				if err != nil {
 					err = fmt.Errorf("failed to add job: %w", err)
 					log.Printf("%+v", err)

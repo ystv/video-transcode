@@ -49,7 +49,12 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = m.mq.Push(t, "video/vod")
+	if err = t.ValidateRequest(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = m.mq.Push(&t, "video/vod")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -68,7 +73,12 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = m.mq.Push(t, "video/simple")
+	if err = t.ValidateRequest(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = m.mq.Push(&t, "video/simple")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
