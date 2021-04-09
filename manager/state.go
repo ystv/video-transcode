@@ -18,17 +18,38 @@ type JobStatus interface {
 	DetailedStatus() string
 }
 
+// WorkerStatus is the data related to an individual
+// worker, that we can monitor
+type WorkerStatus struct {
+	UUID      string `json:"uuid"`
+	JobsCount int    `json:"jobsCount"`
+}
+
+// Busy returns whether the worker has any jobs running
+func (w WorkerStatus) Busy() bool {
+	return w.JobsCount != 0
+}
+
+func (w *WorkerStatus) startJob() {
+	w.JobsCount++
+}
+
+func (w *WorkerStatus) endJob() {
+	w.JobsCount--
+}
+
 // StateHandler is the central place for the systems status
 // for access over HTTP by users
 type stateHandler struct {
 	// TODO: Implement Worker Statuses Here Too
-	jobs map[string]JobStatus
+	jobs    map[string]JobStatus
+	workers map[string]WorkerStatus
 }
 
 func newStateHandler() *stateHandler {
-	jobs := make(map[string]JobStatus)
 	return &stateHandler{
-		jobs: jobs,
+		jobs:    make(map[string]JobStatus),
+		workers: make(map[string]WorkerStatus),
 	}
 }
 
