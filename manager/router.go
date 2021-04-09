@@ -15,7 +15,7 @@ func (m *Manager) Router() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", m.indexHandle)
 	r.HandleFunc("/ok", m.healthHandle)
-	r.HandleFunc("/status/job", m.basicAuth(m.jobStateHandle))
+	r.HandleFunc("/status/job/{uuid}", m.basicAuth(m.jobStateHandle))
 	r.HandleFunc("/status/worker", m.basicAuth(m.workerStateHandle))
 	r.HandleFunc("/task/image/simple", m.basicAuth(m.newImageSimple))
 	r.HandleFunc("/task/video/simple", m.basicAuth(m.newVideoSimpleHandle))
@@ -34,16 +34,6 @@ func (m *Manager) indexHandle(w http.ResponseWriter, r *http.Request) {
 // healthHandle for other services to check it's healthy
 func (m *Manager) healthHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-}
-
-func (m *Manager) jobStateHandle(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-func (m *Manager) workerStateHandle(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	w.WriteHeader(http.StatusNotImplemented)
 }
 
 func (m *Manager) newImageSimple(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +62,12 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	m.state.jobs[t.GetID()] = FullStatusIndicator{
+		FailureMode: "IN-PROGRESS",
+		Summary:     "Starting",
+		Detail:      "VOD Job Sent to Proceessing",
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -85,9 +81,9 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 			fmt.Sprintf("Encoding with Error - %v", err.Error()),
 			http.StatusInternalServerError,
 		)
+	} else {
+		w.Write(rtn)
 	}
-
-	w.Write(rtn)
 
 }
 
@@ -112,6 +108,12 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	m.state.jobs[t.GetID()] = FullStatusIndicator{
+		FailureMode: "IN-PROGRESS",
+		Summary:     "Starting",
+		Detail:      "Simple Video Job Sent to Proceessing",
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -125,9 +127,9 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("Encoding with Error - %v", err.Error()),
 			http.StatusInternalServerError,
 		)
+	} else {
+		w.Write(rtn)
 	}
-
-	w.Write(rtn)
 }
 
 // newWS handles upgrading a worker node's connection to a ws.
