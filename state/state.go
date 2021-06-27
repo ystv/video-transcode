@@ -67,10 +67,11 @@ type TaskIdentification struct {
 // all available information about a job state, for use
 // before it gets Henry-Hoovered.
 type FullStatusIndicator struct {
-	JobID       string `json:"jobID"`
-	FailureMode string `json:"failureMode"`
-	Summary     string `json:"summary"`
-	Detail      string `json:"detail"`
+	JobID       string    `json:"jobID"`
+	FailureMode string    `json:"failureMode"`
+	Summary     string    `json:"summary"`
+	Detail      string    `json:"detail"`
+	Time        time.Time `json:"time"`
 }
 
 // Get returns the job status summary.
@@ -114,10 +115,11 @@ func (fsi FullStatusIndicator) DetailedStatus() string {
 // a future expiry time, and should the SSI also have
 // one? Also, better naming of the field.
 type ShortStatusIndicator struct {
-	JobID       string    `json:"jobID"`
-	FailureMode string    `json:"failureMode"`
-	Summary     string    `json:"summary"`
-	ExpiredTime time.Time `json:"expiredTime"`
+	JobID           string    `json:"jobID"`
+	FailureMode     string    `json:"failureMode"`
+	Summary         string    `json:"summary"`
+	Time            time.Time `json:"time"`
+	FullExpiredTime time.Time `json:"fullExpiredTime"`
 }
 
 // Get returns the job status summary.
