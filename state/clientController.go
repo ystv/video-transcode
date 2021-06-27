@@ -38,7 +38,7 @@ func (h *ClientStateHandler) SendWorkerUpdate(status string) error {
 			}})
 }
 
-func (h *ClientStateHandler) SendJobUpdate(status JobStatus) error {
+func (h *ClientStateHandler) SendJobUpdate(status FullStatusIndicator) error {
 	return h.ws.WriteJSON(
 		StatusUpdate{
 			Header: "JOB",

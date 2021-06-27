@@ -30,11 +30,11 @@ func (w WorkerStatus) Busy() bool {
 	return w.JobsCount != 0
 }
 
-func (w *WorkerStatus) startJob() {
+func (w *WorkerStatus) StartJob() {
 	w.JobsCount++
 }
 
-func (w *WorkerStatus) endJob() {
+func (w *WorkerStatus) EndJob() {
 	w.JobsCount--
 }
 
@@ -43,14 +43,16 @@ func (w *WorkerStatus) endJob() {
 type StateHandler struct {
 	// TODO: Implement Worker Statuses Here Too
 	Jobs    map[string]JobStatus
-	Workers map[string]WorkerStatus
+	Workers map[string]*WorkerStatus
 }
 
 func NewStateHandler() *StateHandler {
-	return &StateHandler{
+	newSH := &StateHandler{
 		Jobs:    make(map[string]JobStatus),
-		Workers: make(map[string]WorkerStatus),
+		Workers: make(map[string]*WorkerStatus),
 	}
+	go newSH.Tidier() // Henry Hoover
+	return newSH
 }
 
 // TaskIdentification is for initially informing the user

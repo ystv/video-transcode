@@ -64,7 +64,7 @@ func main() {
 	}
 	defer stateHandler.Disconnect()
 
-	consumer, err := event.NewConsumer(connection, NewCDN())
+	consumer, err := event.NewConsumer(connection, NewCDN(), &stateHandler)
 	if err != nil {
 		log.Fatalf("failed to start consumer: %+v", err)
 	}

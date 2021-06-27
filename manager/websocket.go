@@ -49,14 +49,19 @@ func Reader(conn *websocket.Conn, m *Manager) {
 
 			switch wStatus.State {
 			case "START":
-				m.state.Workers[wStatus.WorkerID] = state.WorkerStatus{}
+				m.state.Workers[wStatus.WorkerID] = &state.WorkerStatus{}
 			case "END":
 				delete(m.state.Workers, wStatus.WorkerID)
+			case "ADD JOB":
+				m.state.Workers[wStatus.WorkerID].StartJob()
+			case "END JOB":
+				m.state.Workers[wStatus.WorkerID].EndJob()
 			}
 		case "JOB":
-			// Conversion needs to happen here too, this currently breaks
+			var jStatus state.FullStatusIndicator
+			byt, _ := json.Marshal(updateMessage.Body)
+			json.Unmarshal(byt, &jStatus)
 
-			jStatus := updateMessage.Body.(state.JobStatus)
 			m.state.Jobs[jStatus.GetUUID()] = jStatus
 		}
 

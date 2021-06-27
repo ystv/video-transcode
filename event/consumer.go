@@ -8,19 +8,21 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/streadway/amqp"
+	"github.com/ystv/video-transcode/state"
 	"github.com/ystv/video-transcode/task"
 )
 
 // Consumer for receiving AMPQ events
 type Consumer struct {
-	conn *amqp.Connection
-	cdn  *s3.S3
-	task *task.Tasker
+	conn         *amqp.Connection
+	cdn          *s3.S3
+	task         *task.Tasker
+	stateHandler *state.ClientStateHandler
 }
 
 // NewConsumer returns a new Consumer
-func NewConsumer(conn *amqp.Connection, cdn *s3.S3) (*Consumer, error) {
-	c := &Consumer{conn: conn, cdn: cdn, task: task.New(cdn)}
+func NewConsumer(conn *amqp.Connection, cdn *s3.S3, stateHandler *state.ClientStateHandler) (*Consumer, error) {
+	c := &Consumer{conn: conn, cdn: cdn, task: task.New(cdn), stateHandler: stateHandler}
 	ch, err := c.conn.Channel()
 	if err != nil {
 		err = fmt.Errorf("NewConsumer: failed to get channel: %w", err)
@@ -62,7 +64,7 @@ func (c *Consumer) Listen() error {
 					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
 					log.Printf("%+v", err)
 				}
-				err = c.task.Add(context.Background(), &t)
+				err = c.task.Add(context.Background(), &t, c.stateHandler)
 				if err != nil {
 					err = fmt.Errorf("failed to add job: %w", err)
 					log.Printf("%+v", err)
@@ -76,7 +78,7 @@ func (c *Consumer) Listen() error {
 					err = fmt.Errorf("Listen: failed to unmarshal json: %w", err)
 					log.Printf("%+v", err)
 				}
-				err = c.task.Add(context.Background(), &t)
+				err = c.task.Add(context.Background(), &t, c.stateHandler)
 				if err != nil {
 					err = fmt.Errorf("failed to add job: %w", err)
 					log.Printf("%+v", err)

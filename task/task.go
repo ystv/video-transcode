@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/ystv/video-transcode/state"
 )
 
 type (
@@ -29,13 +30,15 @@ func New(cdn *s3.S3) *Tasker {
 }
 
 // Add a task to the tasker and start
-func (ta *Tasker) Add(ctx context.Context, t Task) error {
+func (ta *Tasker) Add(ctx context.Context, t Task, sh *state.ClientStateHandler) error {
 	_, exists := ta.tasks[t.GetID()]
 	if exists {
 		return errors.New("duplicate job id:" + t.GetID())
 	}
 	ta.tasks[t.GetID()] = t
 
+	sh.SendWorkerUpdate("ADD JOB")
+	defer sh.SendWorkerUpdate("END JOB")
 	err := ta.tasks[t.GetID()].Start(ctx)
 	if err != nil {
 		delete(ta.tasks, t.GetID())
