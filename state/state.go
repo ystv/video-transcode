@@ -14,6 +14,7 @@ import "time"
 // a week in summary. Some goroutines can Henry-Hoover this all up
 type JobStatus interface {
 	Get() string
+	GetUUID() string
 	Failure() bool
 	DetailedStatus() string
 }
@@ -21,8 +22,7 @@ type JobStatus interface {
 // WorkerStatus is the data related to an individual
 // worker, that we can monitor
 type WorkerStatus struct {
-	UUID      string `json:"uuid"`
-	JobsCount int    `json:"jobsCount"`
+	JobsCount int `json:"jobsCount"`
 }
 
 // Busy returns whether the worker has any jobs running
@@ -65,6 +65,7 @@ type TaskIdentification struct {
 // all available information about a job state, for use
 // before it gets Henry-Hoovered.
 type FullStatusIndicator struct {
+	JobID       string `json:"jobID"`
 	FailureMode string `json:"failureMode"`
 	Summary     string `json:"summary"`
 	Detail      string `json:"detail"`
@@ -73,6 +74,10 @@ type FullStatusIndicator struct {
 // Get returns the job status summary.
 func (fsi FullStatusIndicator) Get() string {
 	return fsi.Summary
+}
+
+func (fsi FullStatusIndicator) GetUUID() string {
+	return fsi.JobID
 }
 
 // Failure returns a bool for whether the job has failed
@@ -107,6 +112,7 @@ func (fsi FullStatusIndicator) DetailedStatus() string {
 // a future expiry time, and should the SSI also have
 // one? Also, better naming of the field.
 type ShortStatusIndicator struct {
+	JobID       string    `json:"jobID"`
 	FailureMode string    `json:"failureMode"`
 	Summary     string    `json:"summary"`
 	ExpiredTime time.Time `json:"expiredTime"`
@@ -115,6 +121,10 @@ type ShortStatusIndicator struct {
 // Get returns the job status summary.
 func (ssi ShortStatusIndicator) Get() string {
 	return ssi.Summary
+}
+
+func (ssi ShortStatusIndicator) GetUUID() string {
+	return ssi.JobID
 }
 
 // Failure returns a bool for whether the job has failed
@@ -140,4 +150,14 @@ func (ssi ShortStatusIndicator) Failure() bool {
 // TODO - Do we include timing information here?
 func (ssi ShortStatusIndicator) DetailedStatus() string {
 	return "Detailed Description Expired"
+}
+
+type WorkerStatusUpdate struct {
+	State    string `json:"state"`
+	WorkerID string `json:"workerID"`
+}
+
+type StatusUpdate struct {
+	Header string      `json:"header"`
+	Body   interface{} `json:"body"`
 }

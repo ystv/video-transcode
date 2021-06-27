@@ -143,7 +143,7 @@ func (m *Manager) newWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	go Writer(conn)
-	Reader(conn)
+	Reader(conn, m)
 }
 
 // basicAuth wraps a handler requiring HTTP basic auth for it using the given

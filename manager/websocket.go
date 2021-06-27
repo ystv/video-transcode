@@ -1,12 +1,14 @@
 package manager
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/ystv/video-transcode/state"
 )
 
 var upgrader = websocket.Upgrader{
@@ -25,20 +27,40 @@ func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 }
 
 // Reader reads the websocket connection
-func Reader(conn *websocket.Conn) {
+func Reader(conn *websocket.Conn, m *Manager) {
 	for {
-		messageType, p, err := conn.ReadMessage()
+		_, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		fmt.Println(string(p))
-
-		if err := conn.WriteMessage(messageType, p); err != nil {
+		var updateMessage state.StatusUpdate
+		if err := json.Unmarshal(p, &updateMessage); err != nil {
 			log.Println(err)
 			return
 		}
+
+		switch updateMessage.Header {
+		case "WORKER":
+			var wStatus state.WorkerStatusUpdate
+			byt, _ := json.Marshal(updateMessage.Body)
+			json.Unmarshal(byt, &wStatus)
+
+			switch wStatus.State {
+			case "START":
+				m.state.Workers[wStatus.WorkerID] = state.WorkerStatus{}
+			case "END":
+				delete(m.state.Workers, wStatus.WorkerID)
+			}
+		case "JOB":
+			// Conversion needs to happen here too, this currently breaks
+
+			jStatus := updateMessage.Body.(state.JobStatus)
+			m.state.Jobs[jStatus.GetUUID()] = jStatus
+		}
+
+		log.Println(string(p))
 	}
 }
 
