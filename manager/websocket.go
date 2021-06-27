@@ -27,7 +27,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 }
 
 // Reader reads the websocket connection
-func Reader(conn *websocket.Conn, m *Manager) {
+func (m *Manager) Reader(conn *websocket.Conn) {
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -70,7 +70,7 @@ func Reader(conn *websocket.Conn, m *Manager) {
 }
 
 // Writer writes into the websocket
-func Writer(conn *websocket.Conn) {
+func (m *Manager) Writer(conn *websocket.Conn) {
 	for {
 		fmt.Println("Sending")
 		messageType, r, err := conn.NextReader()

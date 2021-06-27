@@ -12,7 +12,7 @@ func (h *StateHandler) Tidier() {
 		// 1. Do a Tidying Pass
 		for key, val := range h.Jobs {
 			if fsi, ok := val.(FullStatusIndicator); ok {
-				if fsi.Time.Add(SHORT_EXPIRY).After(time.Now()) {
+				if fsi.Time.Add(SHORT_EXPIRY).Before(time.Now()) {
 					h.Jobs[key] = ShortStatusIndicator{
 						JobID:           fsi.JobID,
 						FailureMode:     fsi.FailureMode,
@@ -25,7 +25,7 @@ func (h *StateHandler) Tidier() {
 			}
 
 			if ssi, ok := val.(ShortStatusIndicator); ok {
-				if ssi.Time.Add(LONG_EXPIRY).After(time.Now()) {
+				if ssi.Time.Add(LONG_EXPIRY).Before(time.Now()) {
 					delete(h.Jobs, key)
 				}
 			}

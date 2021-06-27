@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/uuid"
+	"github.com/ystv/video-transcode/state"
 )
 
 var _ Task = &VOD{}
@@ -68,7 +69,14 @@ func (t *VOD) ValidateRequest() error {
 // Download video object from S3 and put it in temp file
 // Execute ffmpeg arguements on downloaded file
 // Upload result file
-func (t *VOD) Start(ctx context.Context) error {
+func (t *VOD) Start(ctx context.Context, sh *state.ClientStateHandler) error {
+	sh.SendJobUpdate(state.FullStatusIndicator{
+		JobID:       t.TaskID,
+		FailureMode: "IN-PROGRESS",
+		Summary:     "Started",
+		Detail:      "Job Received by Worker",
+	})
+
 	// Change slashes with dashes making it easier to handle in the FS
 	srcPath := strings.Split(t.SrcURL, "/")
 	dstPath := strings.Split(t.DstURL, "/")
@@ -81,7 +89,15 @@ func (t *VOD) Start(ctx context.Context) error {
 
 	// Video encoding
 	log.Printf("encoding video")
+	sh.SendJobUpdate(state.FullStatusIndicator{
+		JobID:       t.TaskID,
+		FailureMode: "IN-PROGRESS",
+		Summary:     "Encoding",
+		Detail:      "Started Encoding Video",
+	})
 	startEnc := time.Now()
+
+	// TODO More Status Updates Below This Point
 
 	// We're not using the -progress flag since it doesn't give us the duration
 	// of the video which is important to determine the ETA. so we'll just parsing

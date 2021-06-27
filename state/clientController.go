@@ -1,6 +1,8 @@
 package state
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -39,6 +41,7 @@ func (h *ClientStateHandler) SendWorkerUpdate(status string) error {
 }
 
 func (h *ClientStateHandler) SendJobUpdate(status FullStatusIndicator) error {
+	status.Time = time.Now()
 	return h.ws.WriteJSON(
 		StatusUpdate{
 			Header: "JOB",

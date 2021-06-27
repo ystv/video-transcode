@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/ystv/video-transcode/state"
@@ -65,9 +66,11 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 	}
 
 	m.state.Jobs[t.GetID()] = state.FullStatusIndicator{
+		JobID:       t.GetID(),
 		FailureMode: "IN-PROGRESS",
 		Summary:     "Starting",
 		Detail:      "VOD Job Sent to Proceessing",
+		Time:        time.Now(),
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -111,9 +114,11 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.state.Jobs[t.GetID()] = state.FullStatusIndicator{
+		JobID:       t.GetID(),
 		FailureMode: "IN-PROGRESS",
 		Summary:     "Starting",
 		Detail:      "Simple Video Job Sent to Proceessing",
+		Time:        time.Now(),
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -142,8 +147,8 @@ func (m *Manager) newWS(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%+V\n", err)
 		return
 	}
-	go Writer(conn)
-	Reader(conn, m)
+	go m.Writer(conn)
+	m.Reader(conn)
 }
 
 // basicAuth wraps a handler requiring HTTP basic auth for it using the given

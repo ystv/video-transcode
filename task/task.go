@@ -20,7 +20,7 @@ type (
 	Task interface {
 		GetID() string
 		ValidateRequest() error // Generates TaskID as well as validation
-		Start(ctx context.Context) error
+		Start(ctx context.Context, sh *state.ClientStateHandler) error
 	}
 )
 
@@ -39,9 +39,15 @@ func (ta *Tasker) Add(ctx context.Context, t Task, sh *state.ClientStateHandler)
 
 	sh.SendWorkerUpdate("ADD JOB")
 	defer sh.SendWorkerUpdate("END JOB")
-	err := ta.tasks[t.GetID()].Start(ctx)
+	err := ta.tasks[t.GetID()].Start(ctx, sh)
 	if err != nil {
 		delete(ta.tasks, t.GetID())
+		sh.SendJobUpdate(state.FullStatusIndicator{
+			JobID:       t.GetID(),
+			FailureMode: "FAILED",
+			Summary:     "Failed During Job",
+			Detail:      err.Error(),
+		})
 		return fmt.Errorf("failed to start job: %w", err)
 	}
 	delete(ta.tasks, t.GetID())

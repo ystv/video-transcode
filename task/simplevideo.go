@@ -8,6 +8,7 @@ import (
 	"os/exec"
 
 	"github.com/google/uuid"
+	"github.com/ystv/video-transcode/state"
 )
 
 // SimpleVideo represents a task to transcode for VOD or simple
@@ -45,7 +46,16 @@ func (t *SimpleVideo) ValidateRequest() error {
 
 // Start a task
 // This will only execute ffmpeg
-func (t *SimpleVideo) Start(ctx context.Context) error {
+func (t *SimpleVideo) Start(ctx context.Context, sh *state.ClientStateHandler) error {
+	sh.SendJobUpdate(state.FullStatusIndicator{
+		JobID:       t.TaskID,
+		FailureMode: "IN-PROGRESS",
+		Summary:     "Started",
+		Detail:      "Job started by worker",
+	})
+
+	// TODO More Status Updates Below
+
 	// TODO: ffprobe src
 	cmdString := fmt.Sprintf("ffmpeg %s %s -i \"%s\" %s \"%s\" 2>&1",
 		t.Args, t.SrcArgs, t.SrcURL, t.DstArgs, t.DstURL)
