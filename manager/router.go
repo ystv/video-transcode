@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/ystv/video-transcode/state"
 	"github.com/ystv/video-transcode/task"
 )
 
@@ -63,7 +64,7 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	m.state.jobs[t.GetID()] = FullStatusIndicator{
+	m.state.Jobs[t.GetID()] = state.FullStatusIndicator{
 		FailureMode: "IN-PROGRESS",
 		Summary:     "Starting",
 		Detail:      "VOD Job Sent to Proceessing",
@@ -72,7 +73,7 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 
-	rtn, err := json.MarshalIndent(TaskIdentification{
+	rtn, err := json.MarshalIndent(state.TaskIdentification{
 		State:  "encoding",
 		TaskID: t.GetID(),
 	}, "", "    ")
@@ -109,7 +110,7 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.state.jobs[t.GetID()] = FullStatusIndicator{
+	m.state.Jobs[t.GetID()] = state.FullStatusIndicator{
 		FailureMode: "IN-PROGRESS",
 		Summary:     "Starting",
 		Detail:      "Simple Video Job Sent to Proceessing",
@@ -118,7 +119,7 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 
-	rtn, err := json.MarshalIndent(TaskIdentification{
+	rtn, err := json.MarshalIndent(state.TaskIdentification{
 		State:  "encoding",
 		TaskID: t.GetID(),
 	}, "", "    ")

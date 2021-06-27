@@ -12,7 +12,7 @@ func (m *Manager) jobStateHandle(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	uuid := params["uuid"]
 
-	jobState, ok := m.state.jobs[uuid]
+	jobState, ok := m.state.Jobs[uuid]
 
 	if !ok {
 		http.Error(w,
@@ -36,7 +36,7 @@ func (m *Manager) workerStateHandle(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	uuid := params["uuid"]
 
-	workerState, ok := m.state.workers[uuid]
+	workerState, ok := m.state.Workers[uuid]
 
 	if !ok {
 		http.Error(w,
@@ -57,7 +57,7 @@ func (m *Manager) workerStateHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Manager) allWorkersHandler(w http.ResponseWriter, r *http.Request) {
-	rtn, err := json.MarshalIndent(m.state.workers, "", "    ")
+	rtn, err := json.MarshalIndent(m.state.Workers, "", "    ")
 	if err != nil {
 		http.Error(w,
 			"Error getting all worker statuses",

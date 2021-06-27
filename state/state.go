@@ -1,4 +1,4 @@
-package manager
+package state
 
 import "time"
 
@@ -40,16 +40,16 @@ func (w *WorkerStatus) endJob() {
 
 // StateHandler is the central place for the systems status
 // for access over HTTP by users
-type stateHandler struct {
+type StateHandler struct {
 	// TODO: Implement Worker Statuses Here Too
-	jobs    map[string]JobStatus
-	workers map[string]WorkerStatus
+	Jobs    map[string]JobStatus
+	Workers map[string]WorkerStatus
 }
 
-func newStateHandler() *stateHandler {
-	return &stateHandler{
-		jobs:    make(map[string]JobStatus),
-		workers: make(map[string]WorkerStatus),
+func NewStateHandler() *StateHandler {
+	return &StateHandler{
+		Jobs:    make(map[string]JobStatus),
+		Workers: make(map[string]WorkerStatus),
 	}
 }
 

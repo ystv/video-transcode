@@ -2,6 +2,7 @@ package manager
 
 import (
 	"github.com/ystv/video-transcode/event"
+	"github.com/ystv/video-transcode/state"
 )
 
 // Manager provides workers with jobs and offers REST
@@ -10,7 +11,7 @@ type Manager struct {
 	user  string
 	pass  string
 	mq    *event.Producer
-	state *stateHandler
+	state *state.StateHandler
 }
 
 // New creates a new manager
@@ -19,6 +20,6 @@ func New(mq *event.Producer, user, pass string) *Manager {
 		mq:    mq,
 		user:  user,
 		pass:  pass,
-		state: newStateHandler(),
+		state: state.NewStateHandler(),
 	}
 }

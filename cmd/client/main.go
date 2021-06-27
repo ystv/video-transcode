@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
+	"github.com/ystv/video-transcode/state"
 	"github.com/ystv/video-transcode/worker"
 )
 
@@ -23,6 +24,7 @@ type Config struct {
 	CDNEndpoint        string
 	CDNAccessKeyID     string
 	CDNSecretAccessKey string
+	StatusHost         string
 }
 
 var conf Config
@@ -35,6 +37,7 @@ func main() {
 	conf.CDNEndpoint = os.Getenv("VT_CDN_ENDPOINT")
 	conf.CDNAccessKeyID = os.Getenv("VT_CDN_ACCESSKEYID")
 	conf.CDNSecretAccessKey = os.Getenv("VT_CDN_SECRETACCESSKEY")
+	conf.StatusHost = os.Getenv("STATUS_HOST_BASE_URL")
 
 	// Confirm ffmpeg installation
 	cmd := exec.Command("ffmpeg", "-version")
@@ -54,6 +57,12 @@ func main() {
 		log.Fatalf("failed to connect to amqp: %+v", err)
 	}
 	defer connection.Close()
+
+	var stateHandler state.ClientStateHandler = state.ClientStateHandler{}
+	if err := stateHandler.Connect(conf.StatusHost); err != nil {
+		log.Fatalf("failed to connect to state server: %+v", err)
+	}
+	defer stateHandler.Disconnect()
 
 	consumer, err := event.NewConsumer(connection, NewCDN())
 	if err != nil {
