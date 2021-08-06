@@ -113,14 +113,6 @@ func (m *Manager) newVideoSimpleHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.state.Jobs[t.GetID()] = state.FullStatusIndicator{
-		JobID:       t.GetID(),
-		FailureMode: "IN-PROGRESS",
-		Summary:     "Starting",
-		Detail:      "Simple Video Job Sent to Proceessing",
-		Time:        time.Now(),
-	}
-
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 

@@ -8,29 +8,21 @@ import (
 	"github.com/ystv/video-transcode/task"
 )
 
-// Producer for publishinh AMQP events
-type Producer struct {
-	conn *amqp.Connection
-}
-
 // Push (publish) a specified message to the AMQP exchange
-func (e *Producer) Push(request task.Task, taskType string) error {
-
+func (e *Eventer) Push(request task.Task, taskType string) error {
 	reqJSON, err := json.Marshal(request)
 	if err != nil {
-		err = fmt.Errorf("Push: failed to marshal: %w", err)
-		return err
+		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
 	ch, err := e.conn.Channel()
 	if err != nil {
-		err = fmt.Errorf("Push: failed to open channel: %w", err)
-		return err
+		return fmt.Errorf("failed to open channel: %w", err)
 	}
 	defer ch.Close()
 	q, err := declareQueue(ch, taskType)
 	if err != nil {
-		return fmt.Errorf("Push: failed to declare queue: %w", err)
+		return fmt.Errorf("failed to declare queue: %w", err)
 	}
 	err = ch.Publish(
 		"",
@@ -47,21 +39,4 @@ func (e *Producer) Push(request task.Task, taskType string) error {
 		return fmt.Errorf("Push: failed to publish event \"%s\" to channel :%w", request.GetID(), err)
 	}
 	return nil
-}
-
-// NewProducer returns a new event.Producer object
-// ensuring that the object is initialised, without error
-func NewProducer(conn *amqp.Connection) (*Producer, error) {
-	p := &Producer{conn: conn}
-	ch, err := p.conn.Channel()
-	if err != nil {
-		err = fmt.Errorf("NewProducer: failed to get channel: %w", err)
-		return nil, err
-	}
-	err = declareExchange(ch)
-	if err != nil {
-		err = fmt.Errorf("NewProducer: failed to declare exchange: %w, err", err)
-		return nil, err
-	}
-	return p, nil
 }

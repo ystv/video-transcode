@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/ystv/video-transcode/state"
 )
+
+const TypeSimpleVideo string = "video/simple"
 
 // SimpleVideo represents a task to transcode for VOD or simple
 // Essentially just basic inputs to ffmpeg
@@ -21,7 +23,8 @@ type SimpleVideo struct {
 	DstArgs string `json:"dstArgs"` // Output file options
 	DstURL  string `json:"dstURL"`  // Destination of finished encode on
 
-	stats *Stats
+	status Status
+	stats  *Stats
 }
 
 // GetID retrives the task ID
@@ -44,17 +47,26 @@ func (t *SimpleVideo) ValidateRequest() error {
 	return nil
 }
 
-// Start a task
-// This will only execute ffmpeg
-func (t *SimpleVideo) Start(ctx context.Context, sh *state.ClientStateHandler) error {
-	sh.SendJobUpdate(state.FullStatusIndicator{
-		JobID:       t.TaskID,
-		FailureMode: "IN-PROGRESS",
-		Summary:     "Started",
-		Detail:      "Job started by worker",
-	})
+func (t *SimpleVideo) GetStatus() Status {
+	t.status = Status{
+		Stage:      StageTranscoding,
+		StageStart: time.Now(),
+		Stats:      *t.stats,
+		Err:        nil,
+	}
+	return t.status
+}
 
-	// TODO More Status Updates Below
+// Start a simple video task. This will only execute ffmpeg
+func (t *SimpleVideo) Start(ctx context.Context) error {
+	log.Println("starting video!")
+	t.stats = &Stats{}
+	t.status = Status{
+		Stage:      StageTranscoding,
+		StageStart: time.Now(),
+		Stats:      *t.stats,
+		Err:        nil,
+	}
 
 	// TODO: ffprobe src
 	cmdString := fmt.Sprintf("ffmpeg %s %s -i \"%s\" %s \"%s\" 2>&1",
@@ -70,10 +82,8 @@ func (t *SimpleVideo) Start(ctx context.Context, sh *state.ClientStateHandler) e
 
 	err = cmd.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start ffmpeg: %w", err)
+		log.Printf("failed to start ffmpeg: %+v", err)
 	}
-
-	t.stats = &Stats{}
 
 	scanner := bufio.NewScanner(stdout)
 	curLine := ""
@@ -91,7 +101,8 @@ func (t *SimpleVideo) Start(ctx context.Context, sh *state.ClientStateHandler) e
 
 	err = cmd.Wait()
 	if err != nil {
-		return fmt.Errorf("exec failed to wait: %w: %s", err, curLine)
+		log.Printf("exec failed to wait: %+v: %s", err, curLine)
 	}
+
 	return nil
 }
