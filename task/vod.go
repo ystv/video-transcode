@@ -23,9 +23,7 @@ var _ Task = &VOD{}
 
 // VOD task produces a video for the on demand platform
 type VOD struct {
-	TaskID  string `json:"taskID"`  // Task UUID
-	Args    string `json:"args"`    // Global arguments
-	SrcArgs string `json:"srcArgs"` // Input file options
+	taskID  string // Task UUID
 	SrcURL  string `json:"srcURL"`  // Location of source file on CDN
 	DstArgs string `json:"dstArgs"` // Output file options
 	DstURL  string `json:"dstURL"`  // Destination of finished encode on CDN
@@ -49,7 +47,7 @@ func NewVOD(cdn *s3.S3) VOD {
 
 // GetID returns a task ID
 func (t *VOD) GetID() string {
-	return t.TaskID
+	return t.taskID
 }
 
 func (t *VOD) GetStatus() Status {
@@ -67,7 +65,7 @@ func (t *VOD) ValidateRequest() error {
 	}
 
 	// Generating Task ID
-	t.TaskID = uuid.NewString()
+	t.taskID = uuid.NewString()
 	return nil
 }
 
