@@ -2,38 +2,57 @@
 package worker
 
 import (
-	"fmt"
 	"log"
-	"net/url"
 	"os"
+	"sync"
 
-	"github.com/gorilla/websocket"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ystv/video-transcode/event"
 	"github.com/ystv/video-transcode/task"
 )
 
+// Config stores the settings
+type Config struct {
+	WorkerID     string
+	APIEndpoint  string
+	TasksEnabled []string
+}
+
 // Worker is a control object  which listens on both
 // MQ and WS
 type Worker struct {
-	state map[string]*task.Task
+	conf Config
 	// dependencies
-	ws *websocket.Conn
-	mq *event.Consumer
+	task *task.Tasker
+	mq   *event.Eventer
+	cdn  *s3.S3
 }
 
-func New(mq *event.Consumer) *Worker {
-	return &Worker{mq: mq}
+func New(conf Config, mq *event.Eventer, tasker *task.Tasker, cdn *s3.S3) *Worker {
+	return &Worker{conf: conf, mq: mq, task: tasker, cdn: cdn}
 }
 
 func (w *Worker) Run() error {
-	err := w.mq.Listen()
-	if err != nil {
-		return fmt.Errorf("mq failed: %w", err)
-	}
 
-	w.Listen(url.URL{Scheme: "ws", Host: "localhost:7071", Path: "/ws"})
+	wg := sync.WaitGroup{}
 
-	log.Printf("VT ready, PID: %d", os.Getpid())
+	wg.Add(1)
+	// Listen for new tasks on the message queue
+	go w.Listen(&wg)
+	// if err != nil {
+	// 	log.Printf("failed to listen: %+v", err)
+	// }
+
+	wg.Add(1)
+	// Send back status to the message queue
+	go w.PubStatus(&wg)
+	// if err != nil {
+	// 	log.Printf("failed to publish status: %+v", err)
+	// }
+
+	log.Printf("VT ready, worker ID: %s, PID: %d", w.conf.WorkerID, os.Getpid())
+
+	wg.Wait()
 
 	return nil
 }

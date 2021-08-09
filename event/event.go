@@ -6,33 +6,31 @@ import (
 	"github.com/streadway/amqp"
 )
 
-const (
-	queueVideoSimple string = "video/simple"
-	queueVideoVOD    string = "video/vod"
-	queueImageSimple string = "image/simple"
-)
+type Eventer struct {
+	statusQueueName string
+	conn            *amqp.Connection
+}
 
-func newListener(ch *amqp.Channel, queues []string) (<-chan amqp.Delivery, error) {
-	msgChan := make(<-chan amqp.Delivery)
-	for _, queue := range queues {
-		q, err := declareQueue(ch, queue)
-		if err != nil {
-			return nil, fmt.Errorf("failed to declare queue \"%s\"", queue)
-		}
-		msgChan, err = ch.Consume(
-			q.Name, // queue
-			"",     // consumer
-			false,  // autoAck
-			false,  // exclusive
-			false,  // noLocal
-			false,  // noWait
-			nil,    // args
-		)
-		if err != nil {
-			return nil, fmt.Errorf("Listen: failed to consume queue: %w", err)
-		}
+// NewEventer returns a new MQ handling object
+func NewEventer(conn *amqp.Connection) (*Eventer, error) {
+	p := &Eventer{conn: conn}
+	ch, err := p.conn.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get channel: %w", err)
 	}
-	return msgChan, nil
+	err = declareExchange(ch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to declare encode exchange: %w", err)
+	}
+	p.statusQueueName, err = p.newPubSubExchange("encode-status")
+	if err != nil {
+		return nil, fmt.Errorf("failed to declare encode-status exchange: %w", err)
+	}
+	return p, nil
+}
+
+func (e *Eventer) GetChannel() (*amqp.Channel, error) {
+	return e.conn.Channel()
 }
 
 func declareQueue(ch *amqp.Channel, queueName string) (amqp.Queue, error) {
@@ -45,13 +43,11 @@ func declareQueue(ch *amqp.Channel, queueName string) (amqp.Queue, error) {
 		nil,       // arguments
 	)
 	if err != nil {
-		err = fmt.Errorf("declareQueue: failed to declare queue: %w", err)
-		return q, err
+		return q, fmt.Errorf("failed to declare queue: %w", err)
 	}
 	err = ch.Qos(1, 0, false)
 	if err != nil {
-		err = fmt.Errorf("declareQueue: failed to set Qos: %w", err)
-		return q, err
+		return q, fmt.Errorf("failed to set Qos: %w", err)
 	}
 	return q, nil
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,22 +15,23 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/uuid"
-	"github.com/ystv/video-transcode/state"
 )
+
+const TypeVOD string = "video/vod"
 
 var _ Task = &VOD{}
 
 // VOD task produces a video for the on demand platform
 type VOD struct {
-	TaskID  string `json:"taskID"`  // Task UUID
-	Args    string `json:"args"`    // Global arguments
-	SrcArgs string `json:"srcArgs"` // Input file options
+	TaskID  string // Task UUID
 	SrcURL  string `json:"srcURL"`  // Location of source file on CDN
 	DstArgs string `json:"dstArgs"` // Output file options
 	DstURL  string `json:"dstURL"`  // Destination of finished encode on CDN
 
-	stats *Stats
+	APIEndpoint string
+
+	status Status
+	stats  *Stats
 
 	// dependencies
 	cdn *s3.S3
@@ -37,13 +39,22 @@ type VOD struct {
 
 // NewVOD initialises a VOD task object so we can
 // add the tasks dependencies
-func NewVOD(cdn *s3.S3) VOD {
-	return VOD{cdn: cdn}
+func NewVOD(cdn *s3.S3, apiEndpoint string) VOD {
+	return VOD{
+		status:      Status{},
+		stats:       &Stats{},
+		cdn:         cdn,
+		APIEndpoint: apiEndpoint,
+	}
 }
 
 // GetID returns a task ID
 func (t *VOD) GetID() string {
 	return t.TaskID
+}
+
+func (t *VOD) GetStatus() Status {
+	return t.status
 }
 
 // CheckRequets returns an error describing if the user's request is not
@@ -55,9 +66,6 @@ func (t *VOD) ValidateRequest() error {
 	if t.DstURL == "" {
 		return fmt.Errorf("missing dstURL")
 	}
-
-	// Generating Task ID
-	t.TaskID = uuid.NewString()
 	return nil
 }
 
@@ -69,13 +77,9 @@ func (t *VOD) ValidateRequest() error {
 // Download video object from S3 and put it in temp file
 // Execute ffmpeg arguements on downloaded file
 // Upload result file
-func (t *VOD) Start(ctx context.Context, sh *state.ClientStateHandler) error {
-	sh.SendJobUpdate(state.FullStatusIndicator{
-		JobID:       t.TaskID,
-		FailureMode: "IN-PROGRESS",
-		Summary:     "Started",
-		Detail:      "Job Received by Worker",
-	})
+func (t *VOD) Start(ctx context.Context) error {
+	t.status.Stage = StageStarted
+	t.status.StageStart = time.Now()
 
 	// Change slashes with dashes making it easier to handle in the FS
 	srcPath := strings.Split(t.SrcURL, "/")
@@ -88,14 +92,10 @@ func (t *VOD) Start(ctx context.Context, sh *state.ClientStateHandler) error {
 	}
 
 	// Video encoding
-	log.Printf("encoding video")
-	sh.SendJobUpdate(state.FullStatusIndicator{
-		JobID:       t.TaskID,
-		FailureMode: "IN-PROGRESS",
-		Summary:     "Encoding",
-		Detail:      "Started Encoding Video",
-	})
+	log.Printf("encoding video: %s", t.GetID())
 	startEnc := time.Now()
+	t.status.Stage = StageTranscoding
+	t.status.StageStart = startEnc
 
 	// TODO More Status Updates Below This Point
 
@@ -113,13 +113,14 @@ func (t *VOD) Start(ctx context.Context, sh *state.ClientStateHandler) error {
 		return fmt.Errorf("pipe failed: %w", err)
 	}
 
+	log.Printf("%+v", t)
+	log.Println(cmdString)
+
 	// begin encoding
 	err = cmd.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start ffmpeg: %w", err)
 	}
-
-	t.stats = &Stats{}
 
 	scanner := bufio.NewScanner(stdout)
 	curLine := ""
@@ -137,11 +138,13 @@ func (t *VOD) Start(ctx context.Context, sh *state.ClientStateHandler) error {
 
 	err = cmd.Wait()
 	if err != nil {
-		return fmt.Errorf("exec failed: %w", err)
+		return fmt.Errorf("exec failed to wait: %+v: %s", err, curLine)
 	}
 
 	log.Printf("finished encoding - completed in %s", time.Since(startEnc))
 	startUp := time.Now()
+	t.status.Stage = StageUploading
+	t.status.StageStart = startUp
 
 	// Uploading encoded file
 	_, err = t.uploadFile(dstFilename, dstPath)
@@ -191,5 +194,19 @@ func (t *VOD) uploadFile(src string, dst []string) (string, error) {
 		err = fmt.Errorf("failed to delete source file: %w", err)
 		return "", err
 	}
+
+	c := http.Client{}
+
+	res, err := c.Post(os.Getenv("VT_WAPI_ENDPOINT")+"/v1/internal/encoder/transcode_finished/"+t.TaskID, "", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to post to vt: %w", err)
+	}
+
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to send complete status to web-api")
+	}
+	log.Println("uploaded video!")
+
 	return upload.Location, nil
 }

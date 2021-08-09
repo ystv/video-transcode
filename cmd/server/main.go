@@ -18,6 +18,7 @@ type Config struct {
 	AMQPEndpoint string
 	HTTPUser     string
 	HTTPPass     string
+	HTTPPort     string
 }
 
 var conf Config
@@ -26,17 +27,22 @@ func main() {
 	godotenv.Load(".env.local")
 	godotenv.Load(".env")
 	conf.AMQPEndpoint = os.Getenv("VT_AMQP_ENDPOINT")
+	conf.HTTPPort = os.Getenv("VT_HTTP_PORT")
 	conf.HTTPUser = os.Getenv("VT_HTTP_USER")
 	conf.HTTPPass = os.Getenv("VT_HTTP_PASS")
+
+	if conf.HTTPPort == "" {
+		conf.HTTPPort = "7071"
+	}
 
 	conn, err := amqp.Dial(conf.AMQPEndpoint)
 	if err != nil {
 		log.Fatalf("failed to connect to mq: %+v", err)
 	}
 
-	emitter, err := event.NewProducer(conn)
+	emitter, err := event.NewEventer(conn)
 	if err != nil {
-		log.Fatalf("failed to start producer: %+v", err)
+		log.Fatalf("failed to start eventer: %+v", err)
 	}
 
 	m := manager.New(emitter, conf.HTTPUser, conf.HTTPPass)
@@ -44,8 +50,8 @@ func main() {
 	r := mux.NewRouter()
 	mount(r, "/", m.Router())
 
-	log.Printf("listening on :7071")
-	log.Fatal(http.ListenAndServe(":7071", r))
+	log.Printf("listening on :%s", conf.HTTPPort)
+	log.Fatal(http.ListenAndServe(":"+conf.HTTPPort, r))
 }
 
 // mount another mux router ontop of another

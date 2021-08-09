@@ -10,12 +10,12 @@ import (
 type Manager struct {
 	user  string
 	pass  string
-	mq    *event.Producer
+	mq    *event.Eventer
 	state *state.StateHandler
 }
 
 // New creates a new manager
-func New(mq *event.Producer, user, pass string) *Manager {
+func New(mq *event.Eventer, user, pass string) *Manager {
 	return &Manager{
 		mq:    mq,
 		user:  user,

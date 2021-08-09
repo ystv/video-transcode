@@ -14,7 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/ystv/video-transcode/event"
-	"github.com/ystv/video-transcode/state"
+	"github.com/ystv/video-transcode/task"
 	"github.com/ystv/video-transcode/worker"
 )
 
@@ -24,7 +24,7 @@ type Config struct {
 	CDNEndpoint        string
 	CDNAccessKeyID     string
 	CDNSecretAccessKey string
-	StatusHost         string
+	APIEndpoint        string
 }
 
 var conf Config
@@ -37,39 +37,42 @@ func main() {
 	conf.CDNEndpoint = os.Getenv("VT_CDN_ENDPOINT")
 	conf.CDNAccessKeyID = os.Getenv("VT_CDN_ACCESSKEYID")
 	conf.CDNSecretAccessKey = os.Getenv("VT_CDN_SECRETACCESSKEY")
-	conf.StatusHost = os.Getenv("STATUS_HOST_BASE_URL")
+	conf.APIEndpoint = os.Getenv("VT_WAPI_ENDPOINT")
 
 	// Confirm ffmpeg installation
-	cmd := exec.Command("ffmpeg", "-version")
-	o, err := cmd.Output()
+	output, err := exec.Command("ffmpeg", "-version").Output()
 	if err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			log.Fatalf("failed to find ffmpeg install")
 		}
 		log.Fatalf("failed to get ffmpeg version: %+v", err)
 	}
-	ver := strings.Split(string(o), " ")
+	ver := strings.Split(string(output), " ")
 	log.Println("video-transcode: v0.3.0")
 	log.Printf("ffmpeg: v%s", ver[2])
 
-	connection, err := amqp.Dial(conf.AMQPEndpoint)
+	conn, err := amqp.Dial(conf.AMQPEndpoint)
 	if err != nil {
 		log.Fatalf("failed to connect to amqp: %+v", err)
 	}
-	defer connection.Close()
+	defer conn.Close()
 
-	var stateHandler state.ClientStateHandler = state.ClientStateHandler{}
-	if err := stateHandler.Connect(conf.StatusHost); err != nil {
-		log.Fatalf("failed to connect to state server: %+v", err)
-	}
-	defer stateHandler.Disconnect()
-
-	consumer, err := event.NewConsumer(connection, NewCDN(), &stateHandler)
+	cdn := NewCDN()
+	eventer, err := event.NewEventer(conn)
 	if err != nil {
-		log.Fatalf("failed to start consumer: %+v", err)
+		log.Fatalf("failed to create new eventer: %+v", err)
 	}
-	w := worker.New(consumer)
-	w.Run()
+
+	wConf := worker.Config{
+		WorkerID:     "test-worker",
+		APIEndpoint:  conf.APIEndpoint,
+		TasksEnabled: []string{"video/simple", "video/vod"}}
+
+	w := worker.New(wConf, eventer, task.New(cdn), cdn)
+	err = w.Run()
+	if err != nil {
+		log.Fatalf("failed to run worker: %+v", err)
+	}
 }
 
 // NewCDN creates a connection to s3
