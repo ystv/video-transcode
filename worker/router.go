@@ -33,7 +33,7 @@ func (w *Worker) Listen(wg *sync.WaitGroup) error {
 		switch d.RoutingKey {
 		case task.TypeVOD:
 			log.Println("video/vod job received!")
-			t := task.NewVOD(w.cdn)
+			t := task.NewVOD(w.cdn, w.conf.APIEndpoint)
 			err := json.Unmarshal(d.Body, &t)
 			if err != nil {
 				err = fmt.Errorf("failed to unmarshal json: %w", err)

@@ -14,6 +14,7 @@ import (
 // Config stores the settings
 type Config struct {
 	WorkerID     string
+	APIEndpoint  string
 	TasksEnabled []string
 }
 

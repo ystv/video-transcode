@@ -24,6 +24,7 @@ type Config struct {
 	CDNEndpoint        string
 	CDNAccessKeyID     string
 	CDNSecretAccessKey string
+	APIEndpoint        string
 }
 
 var conf Config
@@ -36,6 +37,7 @@ func main() {
 	conf.CDNEndpoint = os.Getenv("VT_CDN_ENDPOINT")
 	conf.CDNAccessKeyID = os.Getenv("VT_CDN_ACCESSKEYID")
 	conf.CDNSecretAccessKey = os.Getenv("VT_CDN_SECRETACCESSKEY")
+	conf.APIEndpoint = os.Getenv("VT_WAPI_ENDPOINT")
 
 	// Confirm ffmpeg installation
 	output, err := exec.Command("ffmpeg", "-version").Output()
@@ -61,7 +63,10 @@ func main() {
 		log.Fatalf("failed to create new eventer: %+v", err)
 	}
 
-	wConf := worker.Config{WorkerID: "test-worker", TasksEnabled: []string{"video/vod", "video/simple"}}
+	wConf := worker.Config{
+		WorkerID:     "test-worker",
+		APIEndpoint:  conf.APIEndpoint,
+		TasksEnabled: []string{"video/simple", "video/vod"}}
 
 	w := worker.New(wConf, eventer, task.New(cdn), cdn)
 	err = w.Run()

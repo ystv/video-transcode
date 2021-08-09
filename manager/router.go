@@ -4,9 +4,11 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/ystv/video-transcode/state"
 	"github.com/ystv/video-transcode/task"
@@ -47,7 +49,7 @@ func (m *Manager) newImageSimple(w http.ResponseWriter, r *http.Request) {
 // newVideoOnDemandHandle will download file from CDN to local
 // transcode, upload and cleanup
 func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request) {
-	t := task.VOD{}
+	t := task.VOD{TaskID: uuid.NewString()}
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -58,6 +60,8 @@ func (m *Manager) newVideoOnDemandHandle(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	log.Println(t.GetID())
 
 	err = m.mq.Push(&t, "video/vod")
 	if err != nil {

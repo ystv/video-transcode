@@ -31,9 +31,9 @@ func (w *Worker) PubStatus(wg *sync.WaitGroup) error {
 	for {
 		select {
 		case <-t:
-			log.Println("lets go girls")
 			for _, task := range w.task.GetTasks(context.Background()) {
 				status.CurrentTasks = append(status.CurrentTasks, task.GetStatus())
+				log.Printf("%+v", err)
 			}
 			reqJSON, err = json.Marshal(status)
 			if err != nil {
